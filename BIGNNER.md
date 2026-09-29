@@ -107,7 +107,7 @@ python ../build_anima_dictionary.py --danbooru data/raw/danbooru.csv --gelbooru 
 **別の新しいターミナルを開き**、Gemma を起動して常駐させます（変換を行う間はずっと開いたままにしておきます）。
 
 > [!IMPORTANT]
-> ポート番号は **`8088`** を指定してください。
+> ポート番号は **`8088`** を指定してください。別のポートや別 PC の Gemma を使う場合は、Web GUI の「詳細設定」または Forge の「サーバー設定」で URL を変更できます（保存され、次回起動時も使われます）。
 
 ```bat
 llama-server -m C:\path\to\your-gemma-model.gguf --port 8088 -c 8192 -ngl 99 -ot "\.ffn_(up|down|gate)_exps\.=CPU" -fa on --jinja --reasoning-budget 0

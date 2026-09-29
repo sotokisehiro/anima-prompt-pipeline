@@ -217,7 +217,11 @@ mklink /J C:\path\to\sd-webui-forge-neo\extensions\anima-prompt-pipeline C:\path
 
 主要な設定は [`anima_pipeline/config.py`](anima_pipeline/config.py) に集約されています。
 
-- `CHAT_URL`: Gemma サーバーのエンドポイント（既定: `http://127.0.0.1:8088`）
+- `CHAT_URL`: Gemma サーバーのエンドポイントの **既定値**（`http://127.0.0.1:8088`）。ソースを書き換えなくても、次の方法で変更できます。
+  - Web GUI: 「詳細設定」の「Gemma サーバー URL」
+  - Forge 拡張: 「Anima Prompt」タブの「サーバー設定」
+  - CLI: `python run.py --server http://192.168.1.10:8088 "..."`（1 回限り・保存しない）
+  - GUI / Forge で保存した値は `user_data/settings.json` に書かれ、次回起動時に読み込まれます（3 つの入口で共有）。優先順位は `--server` > 保存済み設定 > `CHAT_URL`
 - `SNAP_FUZZY_CUTOFF`: ファジー照合の類似度しきい値（既定: `90`）
 - `SNAP_MAX_WORDS`: スナップ補正の対象とする単語数の上限（既定: `4`）
 - `USE_ARTIST_DICT` / `USE_CHAR_DICT`: 辞書による自動抽出の有効/無効
