@@ -57,6 +57,7 @@ anima_pipeline/          # パイプライン本体パッケージ
   constrain.py           # render / validate
   config.py              # 全設定。パスはこのファイルからの相対解決。.env 無し
   service.py             # スレッドセーフな AnimaPipeline キャッシュ(キーは fuzzy_cutoff)
+  settings_store.py      # サーバー URL の保存(user_data/settings.json)。3 入口で共有
   history_store.py       # Forge 用サーバー側履歴(user_data/history.json) + CSV 互換
   app_web.py / run.py    # Web / CLI エントリ(sys.path シム + 絶対 import)
   web/                   # FastAPI が配信する vanilla JS GUI
@@ -79,7 +80,9 @@ user_data/               # サーバー側履歴。gitignore
 5. **整形・検証** — `constrain.py::render`(タグを並べ替えずに文字列化)と `constrain.py::validate`(二重スペースなど機械的なチェックのみ)
 6. **ネガティブ付与** — `config.NEGATIVE_PROMPT` の固定テンプレートを結果に添える
 
-**LLM サーバーは llama-server 1本のみ**。OpenAI 互換の `/v1/chat/completions` を `config.CHAT_URL` 経由で叩く。README / `anima_pipeline/README.md` / `run.py` docstring には `:8080` と書かれているが、実際の `config.py` および `run_llm.bat`/`run_llm_E2B.bat` は **ポート8088**。新しく手を加える際は `config.py` 側を正とし、README の `:8080` を写さない。
+**LLM サーバーは llama-server 1本のみ**。OpenAI 互換の `/v1/chat/completions` を叩く。既定ポートは **8088**(`config.py` / `run_llm.bat`)。
+
+**サーバー URL の解決**: `config.CHAT_URL` は既定値にすぎない。優先順位は「`run(chat_url=)` / CLI `--server` > `settings_store.get_chat_url()`(`user_data/settings.json`、Web GUI・Forge の入力欄で保存) > `config.CHAT_URL`」。`ChatClient` は URL を **呼び出し時**に解決する(import 時固定にしない)ので、`service.py` のキャッシュキーに URL は含めない。UI は URL を直接 `config` から読まず、必ず `settings_store.get_chat_url()` を使う。Web は `GET/PUT /api/settings`、Forge は「サーバー設定」アコーディオン(タブ load 時に保存値を再読込)。
 
 **import 規約**: パッケージ内部(`pipeline.py` など)は相対 import。エントリ(`run.py` / `app_web.py` / Forge の `scripts/`)はリポジトリルートを `sys.path` に入れるシム + `from anima_pipeline import ...`。`__init__.py` はサブモジュールを import しない(軽量)。
 
@@ -89,7 +92,7 @@ user_data/               # サーバー側履歴。gitignore
 
 **パイプラインキャッシュ**(`service.py`): `AnimaPipeline()` は辞書ロード + Aho-Corasick 構築が重い。`fuzzy_cutoff` が変わらない限り使い回す。比較は `None` を `config.SNAP_FUZZY_CUTOFF` に解決してから行う(未解決のまま比較すると常にキャッシュミスする)。temperature / max_tokens / translate はキャッシュキーに含めない。`ChatClient.chat` のこれらのデフォルトも **呼び出し時**に `config` から解決する(import 時固定はしない)。
 
-**設定はすべて `anima_pipeline/config.py` に集約**。主な項目: `CHAT_URL`、`TRANSLATE_FIRST`(既定 True)、`USE_FEWSHOT`、`USE_ARTIST_DICT`/`USE_CHAR_DICT`(辞書ファイルが無ければ自動的に無効)、`GEN_TEMPERATURE`/`GEN_MAX_TOKENS`、`SNAP_MAX_WORDS`/`SNAP_FUZZY_CUTOFF`、`NEGATIVE_PROMPT`、`STATIC_TAGS`。
+**設定はすべて `anima_pipeline/config.py` に集約**。主な項目: `CHAT_URL`(既定値。上記の通りユーザー設定で上書き可)、`TRANSLATE_FIRST`(既定 True)、`USE_FEWSHOT`、`USE_ARTIST_DICT`/`USE_CHAR_DICT`(辞書ファイルが無ければ自動的に無効)、`GEN_TEMPERATURE`/`GEN_MAX_TOKENS`、`SNAP_MAX_WORDS`/`SNAP_FUZZY_CUTOFF`、`NEGATIVE_PROMPT`、`STATIC_TAGS`。
 
 `build_anima_dictionary.py`(ルート直下)は Danbooru/Gelbooru の生 CSV(列: `tag_string`, `category_int64`, `count_int64`, `alias_string`)からカテゴリ/出現数でフィルタし、Gelbooru を優先して統合、`anima_tags.jsonl` / `alias_to_canonical.json` / `vocab.txt` を `anima_pipeline/data/dict*` へ出力する独立 CLI。辞書パスはルートの `/data/` ではない。一般辞書は必須、artist/char は任意。
 
